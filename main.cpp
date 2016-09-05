@@ -19,7 +19,7 @@ int main(){
 	PlateDetector pd;
 	dlib::image_window win;
 	// read all files in KOTON directory
-	for (size_t i = 0; i < filenames.size(); ++i){
+	for (size_t i = filenames.size()-4; i < filenames.size(); ++i){
 
 		cv::VideoCapture video(filenames[i]);
 		if (!video.isOpened()){
@@ -32,13 +32,15 @@ int main(){
 		
 		while (1){
 			try{
+				std::cout << "\r frame: " << video.get(CV_CAP_PROP_POS_FRAMES) << std::flush;
 				video >> frame;
 				cv::imshow("frame", frame);
-				dlib::array2d<uchar> result = pd.detect(frame);
+				dlib::array2d<uchar> result = pd.detect(frame, 0);
 
 				// if result is not empty, show it
 				if (result.size()){
 					win.set_image(result);
+					system("pause");
 				}
 				// read frames until the video ends
 				if (video.get(CV_CAP_PROP_POS_FRAMES) == video.get(CV_CAP_PROP_FRAME_COUNT) - 1){

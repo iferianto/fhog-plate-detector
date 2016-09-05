@@ -1,3 +1,5 @@
+NIGHT_MODE = 1
+
 br_options{
 	MAX_BR_ASPECT_RATIO = 5.0
 	MIN_BR_ASPECT_RATIO = 0.5
@@ -10,6 +12,5 @@ br_options{
 
 threshold{
 	MAX_BINARY_THRESHOLD = 255
-	MIN_BINARY_THRESHOLD = 160
-
+	MIN_BINARY_THRESHOLD = 100
 }

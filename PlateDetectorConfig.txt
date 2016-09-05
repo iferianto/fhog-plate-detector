@@ -6,8 +6,3 @@ svm_files{
 
 svm_directory =  C:/Users/s_madeligoz/Documents/plate_SVM/
 
-
-DIR_LOW = C:/Users/s_madeligoz/Desktop/plate_detection_roi/gunduz/low/
-DIR_MED = C:/Users/s_madeligoz/Desktop/plate_detection_roi/gunduz/medium/
-DIR_HIGH = C:/Users/s_madeligoz/Desktop/plate_detection_roi/gunduz/high/
-

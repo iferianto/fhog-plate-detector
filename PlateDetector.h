@@ -5,7 +5,7 @@
 #include <dlib/image_processing.h>
 #include <dlib/data_io.h>
 #include <dlib/opencv.h>
-
+#include <dlib/gui_widgets.h> // image_window
 #include <fstream>
 
 #include "MotionDetector.h"
@@ -17,10 +17,13 @@ class PlateDetector{
 public:
 	PlateDetector();
 	~PlateDetector();
-	dlib::array2d<uchar> detect(cv::Mat &frame);
+	dlib::array2d<uchar> detect(cv::Mat &frame, int mode);
 	
 
 private:
+
+	int m_detection_mode;
+
 	MotionDetector m_md; // motion detection object
 	dlib::array2d<uchar> get_best_plate();
 	// Detectors
@@ -63,8 +66,7 @@ private:
 	void read_config_file();
 	void resize_frame(cv::Mat &frame);
 	dlib::array2d<uchar> convert_cv_2_dlib_image(const cv::Mat &cv_im);
-
-
+	
 };
 
 #endif
