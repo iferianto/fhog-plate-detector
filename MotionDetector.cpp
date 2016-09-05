@@ -22,8 +22,8 @@ std::vector<cv::Rect> MotionDetector::get_bounding_rectangles(){
 	std::cout << "get_bounding_rectangle Called!" << std::endl;
 #endif
 
-	m_pMOG2->apply(m_frame, m_fgMaskMOG2);
-	cv::morphologyEx(m_fgMaskMOG2, m_binary_image, CV_MOP_CLOSE, SE5x5);
+	//m_pMOG2->apply(m_frame, m_fgMaskMOG2);
+	cv::morphologyEx(m_frame, m_binary_image, CV_MOP_CLOSE, SE5x5);
 	cv::threshold(m_binary_image, m_binary_image, MIN_BINARY_THRESHOLD, MAX_BINARY_THRESHOLD, CV_THRESH_BINARY);
 
 	std::vector< std::vector< cv::Point> > contours;
