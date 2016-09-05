@@ -1,3 +1,0 @@
-# fhog-plate-detector
-
-...

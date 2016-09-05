@@ -15,12 +15,24 @@ const cv::Mat SE5x5 = cv::getStructuringElement(cv::MORPH_RECT, cv::Size(5, 5));
 
 class MotionDetector{
 
+
+public:
+	MotionDetector();
+	//MotionDetector(const cv::Mat &frame);
+	~MotionDetector();
+	std::vector<cv::Rect> get_bounding_rectangles();
+	void set_frame(const cv::Mat &frame);
+	cv::Mat get_frame();
+	void clear_bounding_rectangles(); // clear br after each frame
+
 private:
 	cv::Mat m_frame;
 	cv::Mat m_binary_image;
 	cv::Mat m_fgMaskMOG2;
 	cv::Ptr<cv::BackgroundSubtractor> m_pMOG2;
 	std::vector<cv::Rect> m_bounding_rectangles;
+
+	bool m_nightmode;
 
 	double MAX_BR_ASPECT_RATIO;
 	double MIN_BR_ASPECT_RATIO;
@@ -33,15 +45,7 @@ private:
 	double MIN_BINARY_THRESHOLD;
 
 	void read_config_file();
- 
-public:
-	MotionDetector();
-	//MotionDetector(const cv::Mat &frame);
-	~MotionDetector();
-	std::vector<cv::Rect> get_bounding_rectangles();
-	void set_frame(const cv::Mat &frame);
-	cv::Mat get_frame();
-	void clear_bounding_rectangles(); // clear br after each frame
+
 
 };
 

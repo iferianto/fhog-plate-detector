@@ -41,7 +41,7 @@ std::vector<cv::Rect> MotionDetector::get_bounding_rectangles(){
 			br.width / br.height > MIN_BR_ASPECT_RATIO &&
 			br.width / br.height < MAX_BR_ASPECT_RATIO &&
 			br.height > MIN_BR_HEIGHT &&
-			br.height < MAX_BR_HEIGHT &&
+			//br.height < MAX_BR_HEIGHT &&
 			br.width > MIN_BR_WIDTH &&
 			br.width > MIN_BR_WIDTH // MAX_BR_WIDTH
 			)
@@ -49,6 +49,7 @@ std::vector<cv::Rect> MotionDetector::get_bounding_rectangles(){
 			m_bounding_rectangles.push_back(br); // Add appropriate rectangles to the vector
 			
 		}
+
 
 		++itc;
 	}
@@ -67,6 +68,7 @@ void MotionDetector::read_config_file(){
 
 	dlib::config_reader cr("MotionDetectorConfig.txt");
 	try{
+
 		MAX_BR_ASPECT_RATIO = dlib::get_option(cr, "br_options.MAX_BR_ASPECT_RATIO", 3.0);
 		MIN_BR_ASPECT_RATIO = dlib::get_option(cr, "br_options.MIN_BR_ASPECT_RATIO", 0.5);
 		MAX_BR_HEIGHT = dlib::get_option(cr, "br_options.MAX_BR_HEIGHT", 300);

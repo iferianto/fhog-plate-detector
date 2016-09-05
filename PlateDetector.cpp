@@ -1,6 +1,7 @@
 #include "PlateDetector.h"
 
 
+
 //#define DEBUG
 
 PlateDetector::PlateDetector(){
@@ -38,38 +39,6 @@ void PlateDetector::reset_nomotion(){
 
 	m_best_frame.release();
 
-}
-
-// not necessary in platedetector.cpp
-std::string PlateDetector::get_save_directory(double &current_detection_confidence){
-	//	if (current_detection_confidence < 0.3){
-	//
-	//#ifdef DEBUG
-	//		std::cout << "Low level confidence: " << current_detection_confidence << std::endl;
-	//#endif
-	//
-	//		return LOW_DIRECTORY;
-	//	}
-	//
-	//	else if (current_detection_confidence < 0.6){
-	//
-	//
-	//#ifdef DEBUG
-	//		std::cout << "Medium level confidence: " << current_detection_confidence << std::endl;
-	//#endif
-	//
-	//		return MED_DIRECTORY;
-	//	}
-	//
-	//	else{
-	//
-	//#ifdef DEBUG
-	//		std::cout << "High level confidence: " << current_detection_confidence << std::endl;
-	//#endif
-	//		return HIGH_DIRECTORY;
-	//	}
-	//
-	return nullptr;
 }
 
 // TODO: read file paths from config file
