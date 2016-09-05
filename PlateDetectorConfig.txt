@@ -1,4 +1,5 @@
-svm_files{
+svm_files
+{
 	file1 =	sam_bil_akinci_201422_bil_odtu_90_38_mult_kare_c1000_resize_large.xml_.svm
 	file2 = sam_bil_akinci_201422_bil_odtu_90_38_mult_kare_c1000.xml_.svm
 	file3 = sam_bil_akinci_201422_bil_odtu_120_50_mult_kare_c1000_resize_original.xml_.svm
@@ -7,7 +8,8 @@ svm_files{
 svm_directory =  C:/Users/s_madeligoz/Documents/plate_SVM/
 
 
-DIR_LOW = C:/Users/s_madeligoz/Desktop/plate_detection_roi/gunduz/low/
-DIR_MED = C:/Users/s_madeligoz/Desktop/plate_detection_roi/gunduz/medium/
-DIR_HIGH = C:/Users/s_madeligoz/Desktop/plate_detection_roi/gunduz/high/
+DETECTION_RECTANGLE_TOP = 80
+DETECTION_RECTANGLE_LEFT = 300
+DETECTION_RECTANGLE_BOT = 380
+DETECTION_RECTANGLE_RIGHT = 800
 

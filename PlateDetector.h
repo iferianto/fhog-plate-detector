@@ -21,6 +21,9 @@ public:
 	dlib::array2d<uchar> get_best_plate();
 
 private:
+
+	bool USER_DEFINED_ROI;
+
 	MotionDetector m_md; // motion detection object
 
 	// Detectors
@@ -46,32 +49,34 @@ private:
 	double m_current_confidence;
 	double m_best_confidence;
 
+	const int STUPID_CONSTANT_FOR_RESETTING_RECTANGLE = 9999; // NO COMMENT
 	// read from config
 	const double CONVERTED_FRAME_WIDTH = 800;
 	const double CONVERTED_FRAME_HEIGHT = 640;
-	const int STUPID_CONSTANT_FOR_RESETTING_RECTANGLE = 9999; // NO COMMENT
+	int DETECTION_RECTANGLE_TOP;
+	int DETECTION_RECTANGLE_LEFT;
+	int DETECTION_RECTANGLE_BOT;
+	int DETECTION_RECTANGLE_RIGHT;
+	
 
 	// Functions
 	bool check_same_plate(dlib::rectangle &r1, dlib::rectangle &r2, dlib::rectangle &bounding_rectangle);
-
 	void reset_nomotion();
-
-	std::string get_save_directory(double &current_detection_confidence);
-
-	std::vector<dlib::object_detector<image_scanner_type>> load_detectors(bool d1, bool d2, bool d3);
-
-	dlib::rectangle find_in_original_frame(cv::Rect &bounding_rect, dlib::rectangle &det);
-
-	dlib::rectangle openCVRectToDlib(cv::Rect &r);
-
 	void update_best_plate(cv::Mat &best_detected_frame,
-		dlib::rectangle &best_detected_det,	double &best_detection_confidence,
+		dlib::rectangle &best_detected_det, double &best_detection_confidence,
 		std::string best_detected_dir);
 
 	void read_config_file();
 	void resize_frame(cv::Mat &frame);
 
+	std::string get_save_directory(double &current_detection_confidence);
+	std::vector<dlib::object_detector<image_scanner_type>> load_detectors(bool d1, bool d2, bool d3);
+	dlib::rectangle find_in_original_frame(cv::Rect &bounding_rect, dlib::rectangle &det);
+	dlib::rectangle openCVRectToDlib(cv::Rect &r);
 	dlib::array2d<uchar> convert_cv_2_dlib_image(const cv::Mat &cv_im);
+
+	
+
 
 };
 

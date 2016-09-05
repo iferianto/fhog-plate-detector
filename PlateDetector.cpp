@@ -1,10 +1,23 @@
 #include "PlateDetector.h"
 
 
-//#define DEBUG
+#define DEBUG
 
 PlateDetector::PlateDetector(){
 	read_config_file(); // PlateDetectorConfig.txt
+
+	if (DETECTION_RECTANGLE_BOT == 0 &&
+		DETECTION_RECTANGLE_BOT == 0 &&
+		DETECTION_RECTANGLE_BOT == 0 &&
+		DETECTION_RECTANGLE_BOT == 0 ){
+		
+		USER_DEFINED_ROI = false; 
+	}
+	else{
+		USER_DEFINED_ROI = true;
+	}
+
+
 	m_detectors = load_detectors(true, true, true); // all 3 detectors are active
 	reset_nomotion(); // reset best_frame and previous rectangle
 }
@@ -38,38 +51,6 @@ void PlateDetector::reset_nomotion(){
 
 	m_best_frame.release();
 
-}
-
-// not necessary in platedetector.cpp
-std::string PlateDetector::get_save_directory(double &current_detection_confidence){
-	//	if (current_detection_confidence < 0.3){
-	//
-	//#ifdef DEBUG
-	//		std::cout << "Low level confidence: " << current_detection_confidence << std::endl;
-	//#endif
-	//
-	//		return LOW_DIRECTORY;
-	//	}
-	//
-	//	else if (current_detection_confidence < 0.6){
-	//
-	//
-	//#ifdef DEBUG
-	//		std::cout << "Medium level confidence: " << current_detection_confidence << std::endl;
-	//#endif
-	//
-	//		return MED_DIRECTORY;
-	//	}
-	//
-	//	else{
-	//
-	//#ifdef DEBUG
-	//		std::cout << "High level confidence: " << current_detection_confidence << std::endl;
-	//#endif
-	//		return HIGH_DIRECTORY;
-	//	}
-	//
-	return nullptr;
 }
 
 // TODO: read file paths from config file
@@ -151,10 +132,6 @@ bool PlateDetector::check_same_plate(dlib::rectangle &r1, dlib::rectangle &r2, d
 
 void PlateDetector::read_config_file(){
 
-#ifdef DEBUG
-	std::cout << "PlateDetectorConfig.txt Loaded!" << std::endl;
-#endif 
-
 	dlib::config_reader cr("PlateDetectorConfig.txt");
 
 	svm_directory = dlib::get_option(cr, "svm_directory", "");
@@ -164,9 +141,12 @@ void PlateDetector::read_config_file(){
 	svm_file_names.push_back(dlib::get_option(cr, "svm_files.file2", ""));
 	svm_file_names.push_back(dlib::get_option(cr, "svm_files.file3", ""));
 
-
-
-
+	// user-defined bounding rectangle
+	DETECTION_RECTANGLE_TOP = dlib::get_option(cr, "DETECTION_RECTANGLE_TOP", 0);
+	DETECTION_RECTANGLE_BOT = dlib::get_option(cr, "DETECTION_RECTANGLE_BOT", 0);
+	DETECTION_RECTANGLE_LEFT = dlib::get_option(cr, "DETECTION_RECTANGLE_LEFT", 0);
+	DETECTION_RECTANGLE_RIGHT = dlib::get_option(cr, "DETECTION_RECTANGLE_RIGHT", 0);
+	 
 }
 
 dlib::array2d<uchar> PlateDetector::convert_cv_2_dlib_image(const cv::Mat &cv_im){
@@ -188,6 +168,7 @@ dlib::array2d<uchar> PlateDetector::get_best_plate(){
 	return output_rect;
 }
 dlib::array2d<uchar> PlateDetector::detect(cv::Mat &frame){
+	static int nicevariableman = 0;
 
 	dlib::array2d<uchar> result;
 
@@ -197,14 +178,26 @@ dlib::array2d<uchar> PlateDetector::detect(cv::Mat &frame){
 	// Resize to ease detection if possible
 	resize_frame(frame); // then use m_resized_frame
 
+
 	// Adjust color and blur etc.
 	cv::cvtColor(m_resized_frame, m_resized_frame, CV_BGR2GRAY);
 	cv::GaussianBlur(m_resized_frame, m_resized_frame, cv::Size(5, 5), 0);
 
 	// 1- Detect Motion on processed frame
-	m_md.set_frame(m_resized_frame);
-	std::vector<cv::Rect> cv_bounding_rectangles = m_md.get_bounding_rectangles();
+	std::vector<cv::Rect> cv_bounding_rectangles;
 
+	// default bounding rectangle
+	if (!USER_DEFINED_ROI){
+		m_md.set_frame(m_resized_frame);
+		cv_bounding_rectangles = m_md.get_bounding_rectangles();
+
+	}
+
+	// if user has defined the roi rectangle in config file
+	else if (USER_DEFINED_ROI){
+		cv_bounding_rectangles.push_back(cv::Rect(cv::Point(DETECTION_RECTANGLE_LEFT, DETECTION_RECTANGLE_TOP), cv::Point(DETECTION_RECTANGLE_RIGHT, DETECTION_RECTANGLE_BOT)));
+	}
+	
 	// 2- Detect Plate (if motion detected)
 	if (!cv_bounding_rectangles.empty()){
 		dlib::array2d<unsigned char> dlib_frame = convert_cv_2_dlib_image(m_resized_frame); // keep the original frame for extraction
@@ -215,23 +208,34 @@ dlib::array2d<uchar> PlateDetector::detect(cv::Mat &frame){
 			dlib::rectangle dlib_bounding_rectangle = openCVRectToDlib(bounding_rect); // convert current slice to dlib image
 			dlib::rectangle dlib_corresponding_bounding_rectangle = find_in_original_frame(cv::Rect(0, 0, 0, 0), dlib_bounding_rectangle); // motion rectangle in the hd frame
 
+#ifdef DEBUG
+			//cv::line(m_resized_frame, cv::Point(0,100), cv::Point(800,100), cv::Scalar(255),2,8,0);
+			cv::rectangle(m_resized_frame, bounding_rect, (0,255,0), 3);
+			cv::imshow("resized frame", m_resized_frame);
+
+#endif 
+
+			
 			dlib::array2d<unsigned char> dlib_bounding_rectangle_im = convert_cv_2_dlib_image(cv_bounding_rectangle_im); // detectors works on dlib images
 
 			std::vector<dlib::rectangle> dets = dlib::evaluate_detectors(m_detectors, dlib_bounding_rectangle_im); // returns list of detected rectangles
-			std::vector<dlib::rect_detection> confidences;
-			dlib::evaluate_detectors(m_detectors, dlib_bounding_rectangle_im, confidences); // get detection confidence
-
-
+		
 			// Detector finds something 
 			if (!dets.empty()){
 
+				std::vector<dlib::rect_detection> confidences;
+				dlib::evaluate_detectors(m_detectors, dlib_bounding_rectangle_im, confidences); // get detection confidence
+
 				m_current_det = dets[0]; // dets[0] is the most confident rectangle. (see: dlib::evaluate_detectors())
 
-				//dlib::rectangle corresponding_previous_det = find_in_original_frame(bounding_rect, m_previous_det);
 				m_current_confidence = confidences[0].detection_confidence;
 
-				//std::string save_dir = get_save_directory(m_current_confidence); // different save locations for confidences
 
+				if (m_current_confidence < 0.5){
+					break;
+				}
+
+			
 				dlib::rectangle corresponding_current_det = find_in_original_frame(bounding_rect, m_current_det);
 				dlib::rectangle corresponding_previous_det = find_in_original_frame(bounding_rect, m_previous_det);
 
@@ -243,13 +247,30 @@ dlib::array2d<uchar> PlateDetector::detect(cv::Mat &frame){
 					// If previous and current rectangles are in the same bounding rectangle, compare confidences
 					if (check_same_plate(corresponding_previous_det, corresponding_current_det, dlib_corresponding_bounding_rectangle)){
 
+#ifdef DEBUG
+						std::cout << "Same Plate Detected\n";
+#endif // DEBUG
+
+
 						// If current confidence is better, update best plate
 						if (m_current_confidence >= m_best_confidence){
+
+#ifdef DEBUG
+							std::cout << "better confidence: " << m_current_confidence <<  std::endl;
+#endif // DEBUG
+
+
+
 							update_best_plate(m_frame, corresponding_current_det, m_current_confidence, ""/*save_dir*/);
 							m_previous_det = m_current_det;
 						}
 						// If previous confidence is better, do nothing
 						else{
+
+#ifdef DEBUG
+							std::cout << "previous confidence better"<< std::endl;
+#endif // DEBUG
+
 
 						}
 
@@ -257,6 +278,10 @@ dlib::array2d<uchar> PlateDetector::detect(cv::Mat &frame){
 
 					// If previous and current rectangles are different 
 					else{
+#ifdef DEBUG
+						std::cout << "New plate detected\n";
+#endif // DEBUG
+
 
 						// send the best plate and update it
 						result = get_best_plate();
@@ -275,26 +300,42 @@ dlib::array2d<uchar> PlateDetector::detect(cv::Mat &frame){
 
 				}
 
+				// 9 frames tolerance to detect plate when motion exist
+				if (USER_DEFINED_ROI)
+					nicevariableman = 0;
 			}
 
+
+			// in userdefinedroi mode, 
+			if (USER_DEFINED_ROI){
+				if (m_previous_det.left() != STUPID_CONSTANT_FOR_RESETTING_RECTANGLE && (++nicevariableman > 9)){
+					if (!result.size())
+						result = get_best_plate();
+					reset_nomotion();
+					nicevariableman = 0;
+				}
+			}
+			
+
 		}
 
-	} // end motion detected
+	} 
 
-	else{
-
-		//static int frame_counter = 0;
-		// clear old data
-		if (m_previous_det.left() != STUPID_CONSTANT_FOR_RESETTING_RECTANGLE){
+	if (!USER_DEFINED_ROI){
+		if (m_previous_det.left() != STUPID_CONSTANT_FOR_RESETTING_RECTANGLE && (++nicevariableman > 9)){
 			result = get_best_plate();
 			reset_nomotion();
+			nicevariableman = 0;
 		}
-
 	}
 
 	// each frame clear old rectangles
 	m_md.clear_bounding_rectangles();
 
+	
+
 	return result;
 
 }
+
+
