@@ -75,7 +75,6 @@ private:
 	dlib::rectangle openCVRectToDlib(cv::Rect &r);
 	dlib::array2d<uchar> convert_cv_2_dlib_image(const cv::Mat &cv_im);
 
-	
 
 
 };
