@@ -32,6 +32,8 @@ private:
 	// Frames
 	cv::Mat m_frame; // if original input has a higher resolution
 	cv::Mat m_resized_frame; // used just for plate detection, has a lower resolution
+	double m_w_ratio;
+	double m_h_ratio;
 
 	// Directories
 	std::string svm_directory; // directory of pretrained .svm files

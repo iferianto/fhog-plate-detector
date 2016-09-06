@@ -1,5 +1,5 @@
 #include "PlateDetector.h"
-
+#include <chrono>
 
 //#define DEBUG
 
@@ -30,7 +30,7 @@ PlateDetector::~PlateDetector(){
 
 void PlateDetector::resize_frame(cv::Mat &frame){
 	// Input frame is resized to 800x640, if it has a higher resolution
-	if (frame.size().width > 800){
+	if (frame.size().width > CONVERTED_FRAME_WIDTH){
 		cv::resize(frame, m_resized_frame, cv::Size(CONVERTED_FRAME_WIDTH, CONVERTED_FRAME_HEIGHT));
 	}
 	else{
@@ -85,18 +85,18 @@ dlib::rectangle PlateDetector::find_in_original_frame(cv::Rect &bounding_rect, d
 
 	dlib::rectangle newDet;
 
-	double w_ratio = m_frame.size().width / CONVERTED_FRAME_WIDTH; // must be greater than 1
-	double h_ratio = m_frame.size().height / CONVERTED_FRAME_HEIGHT; // must be greater than 1
+	m_w_ratio = m_frame.size().width / CONVERTED_FRAME_WIDTH;
+	m_h_ratio = m_frame.size().height / CONVERTED_FRAME_HEIGHT; 
 
-	if (w_ratio < 1){
-		w_ratio = 1;
-		h_ratio = 1;
+	if (m_w_ratio < 1){
+		m_w_ratio = 1;
+		m_h_ratio = 1;
 	}
 
-	newDet.set_left((det.tl_corner().x() + bounding_rect.tl().x) * w_ratio);
-	newDet.set_right((det.br_corner().x() + bounding_rect.tl().x) * w_ratio);
-	newDet.set_top((det.tl_corner().y() + bounding_rect.tl().y)* h_ratio);
-	newDet.set_bottom((det.br_corner().y() + bounding_rect.tl().y) * h_ratio);
+	newDet.set_left((det.tl_corner().x() + bounding_rect.tl().x) * m_w_ratio);
+	newDet.set_right((det.br_corner().x() + bounding_rect.tl().x) * m_w_ratio);
+	newDet.set_top((det.tl_corner().y() + bounding_rect.tl().y)* m_h_ratio);
+	newDet.set_bottom((det.br_corner().y() + bounding_rect.tl().y) * m_h_ratio);
 
 	return newDet;
 
@@ -206,19 +206,29 @@ dlib::array2d<uchar> PlateDetector::detect(cv::Mat &frame){
 
 	// 1- Detect Motion on processed frame
 	std::vector<cv::Rect> cv_bounding_rectangles;
-
-	// default bounding rectangle
-	if (!USER_DEFINED_ROI){
-		m_md.set_frame(m_resized_frame);
-		cv_bounding_rectangles = m_md.get_bounding_rectangles();
-
-	}
+	cv::Rect cv_roi_rect;
+	cv::Mat cv_roi_im;
 
 	// if user has defined the roi rectangle in config file
-	else if (USER_DEFINED_ROI){
-		cv_bounding_rectangles.push_back(cv::Rect(cv::Point(DETECTION_RECTANGLE_LEFT, DETECTION_RECTANGLE_TOP), cv::Point(DETECTION_RECTANGLE_RIGHT, DETECTION_RECTANGLE_BOT)));
+	if (USER_DEFINED_ROI){
+		cv_roi_rect = (cv::Rect(cv::Point(DETECTION_RECTANGLE_LEFT, DETECTION_RECTANGLE_TOP), cv::Point(DETECTION_RECTANGLE_RIGHT, DETECTION_RECTANGLE_BOT)));
+		cv_roi_im = cv::Mat(m_resized_frame, cv_roi_rect); // crop the image from where motion occurs, assume you have 1 br
+		m_md.set_frame(cv_roi_im);
+
+		if (!m_md.get_bounding_rectangles().empty()){
+			cv_bounding_rectangles.push_back(cv_roi_rect);
+		}
+		cv::imshow("roi_im", cv_roi_im);
+		cv::waitKey(1);
 	}
 	
+	else{
+		m_md.set_frame(m_resized_frame);
+		cv_bounding_rectangles = m_md.get_bounding_rectangles();	
+	}
+	
+
+
 	// 2- Detect Plate (if motion detected)
 	if (!cv_bounding_rectangles.empty()){
 		dlib::array2d<unsigned char> dlib_frame = convert_cv_2_dlib_image(m_resized_frame); // keep the original frame for extraction
@@ -226,20 +236,15 @@ dlib::array2d<uchar> PlateDetector::detect(cv::Mat &frame){
 
 		for (auto &bounding_rect : cv_bounding_rectangles){
 
-			/*std::cout << "AREA: " << bounding_rect.area() << std::endl;
-			std::cout << "WIDTH: " << bounding_rect.size().width << std::endl;
-			std::cout << "HEIGHT: " << bounding_rect.size().height << std::endl;
-			system("pause");
-		*/	
 			cv::Mat cv_bounding_rectangle_im = cv::Mat(m_resized_frame, bounding_rect); // crop the image from where motion occurs
 			dlib::rectangle dlib_bounding_rectangle = openCVRectToDlib(bounding_rect); // convert current slice to dlib image
 			dlib::rectangle dlib_corresponding_bounding_rectangle = find_in_original_frame(cv::Rect(0, 0, 0, 0), dlib_bounding_rectangle); // motion rectangle in the hd frame
 
 #ifdef DEBUG
 			//cv::line(m_resized_frame, cv::Point(0,100), cv::Point(800,100), cv::Scalar(255),2,8,0);
-			cv::rectangle(m_resized_frame, bounding_rect, (0,255,0), 3);
+			/*cv::rectangle(m_resized_frame, bounding_rect, (0,255,0), 3);
 			cv::imshow("resized frame", m_resized_frame);
-			cv::waitKey(1);
+			cv::waitKey(1);*/
 
 #endif 
 
@@ -250,8 +255,17 @@ dlib::array2d<uchar> PlateDetector::detect(cv::Mat &frame){
 		
 			std::vector<dlib::rect_detection> rect_detections;
 			std::vector<dlib::rectangle> dets;
+
+		//	std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
+
+
 			dlib::evaluate_detectors(m_detectors, dlib_bounding_rectangle_im, rect_detections); // get detection confidence
 			
+		//	std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
+		//	int timeElapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count();
+		//	std::cout << "Detection took: " << timeElapsed << " ms" << std::endl;
+
+
 			for (auto &rect_det : rect_detections){
 				dets.push_back(rect_det.rect);
 			}

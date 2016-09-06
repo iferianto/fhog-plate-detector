@@ -2,12 +2,6 @@
 
 //#define DEBUG
 
-#ifdef DEBUG
-	#include <dlib/gui_widgets.h> // image_window
-#endif 
-
-
-
 MotionDetector::MotionDetector(){
 	read_config_file();
 	m_pMOG2 = cv::createBackgroundSubtractorMOG2(300, 32, true);
@@ -35,19 +29,14 @@ std::vector<cv::Rect> MotionDetector::get_bounding_rectangles(){
 		CV_CHAIN_APPROX_SIMPLE); // all pixels of each contours
 	std::vector< std::vector< cv::Point> >::iterator itc = contours.begin();
 	
-#ifdef DEBUG
-	cv::imshow("binary_image", m_binary_image);
-#endif 
-
-
 
 	// Filter Bounding Rectangles
 	while (itc != contours.end()) {
 		cv::Rect br = cv::boundingRect(cv::Mat(*itc));
 
-		if (br.area() > MIN_BR_AREA &&
-			br.width / br.height > MIN_BR_ASPECT_RATIO &&
-			br.width / br.height < MAX_BR_ASPECT_RATIO &&
+		if (//br.area() > MIN_BR_AREA &&
+			//br.width / br.height > MIN_BR_ASPECT_RATIO &&
+			//br.width / br.height < MAX_BR_ASPECT_RATIO &&
 			br.height > MIN_BR_HEIGHT &&
 			br.height < MAX_BR_HEIGHT &&
 			br.width > MIN_BR_WIDTH &&
@@ -61,9 +50,6 @@ std::vector<cv::Rect> MotionDetector::get_bounding_rectangles(){
 		++itc;
 	}
 	
-#ifdef DEBUG
-	//std::cout << "get_bounding_rectangle end!" << std::endl;
-#endif
 	return m_bounding_rectangles;
 }
 

@@ -33,8 +33,9 @@ int main(){
 
 			std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
 			int timeElapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count();
-			std::cout << "\r" << "Detection Took: " << timeElapsed << std::flush;
-
+			//std::cout << "\r" << "Detection Took: " << timeElapsed << std::flush;
+			if (timeElapsed > 30)
+				std::cout << "Detection took: " << timeElapsed << " ms" << std::endl;
 
 			// if result is not empty, show it
 			if (result.size()){
