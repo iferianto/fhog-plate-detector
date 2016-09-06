@@ -1,7 +1,7 @@
 #include "PlateDetector.h"
 
 
-#define DEBUG
+//#define DEBUG
 
 PlateDetector::PlateDetector(){
 	read_config_file(); // PlateDetectorConfig.txt
@@ -88,6 +88,11 @@ dlib::rectangle PlateDetector::find_in_original_frame(cv::Rect &bounding_rect, d
 	double w_ratio = m_frame.size().width / CONVERTED_FRAME_WIDTH; // must be greater than 1
 	double h_ratio = m_frame.size().height / CONVERTED_FRAME_HEIGHT; // must be greater than 1
 
+	if (w_ratio < 1){
+		w_ratio = 1;
+		h_ratio = 1;
+	}
+
 	newDet.set_left((det.tl_corner().x() + bounding_rect.tl().x) * w_ratio);
 	newDet.set_right((det.br_corner().x() + bounding_rect.tl().x) * w_ratio);
 	newDet.set_top((det.tl_corner().y() + bounding_rect.tl().y)* h_ratio);
@@ -114,18 +119,34 @@ void PlateDetector::update_best_plate(cv::Mat &current_frame,
 
 }
 
-bool PlateDetector::check_same_plate(dlib::rectangle &r1, dlib::rectangle &r2, dlib::rectangle &bounding_rectangle){
-	int delta_x = 100;
-	int delta_y = 100;
-	// distance between 2 rectangles is less than deltas
-	if ((abs(r1.tl_corner().x() - r2.tl_corner().x()) < delta_x && abs(r1.tl_corner().y() - r2.tl_corner().y()) < delta_y) ||
-		(bounding_rectangle.contains(r1.tl_corner()) && bounding_rectangle.contains(r2.tl_corner()))
-		)
-	{
+// distance between 2 rectangles is less than deltas
 
-		return true;
+bool PlateDetector::check_same_plate(dlib::rectangle &r1, dlib::rectangle &r2, dlib::rectangle &bounding_rectangle){
+	int delta_x = 50;
+	int delta_y = 50;
+
+
+
+	if (USER_DEFINED_ROI){
+		if ((abs(r1.tl_corner().x() - r2.tl_corner().x()) < delta_x && abs(r1.tl_corner().y() - r2.tl_corner().y()) < delta_y)){
+			return true;
+		}
+
 	}
 
+	else{
+
+		if ((abs(r1.tl_corner().x() - r2.tl_corner().x()) < delta_x && abs(r1.tl_corner().y() - r2.tl_corner().y()) < delta_y) ||
+			(bounding_rectangle.contains(r1.tl_corner()) && bounding_rectangle.contains(r2.tl_corner()))
+			)
+		{
+
+			return true;
+		}
+
+		
+	}
+	
 	return false;
 
 }
@@ -204,6 +225,12 @@ dlib::array2d<uchar> PlateDetector::detect(cv::Mat &frame){
 
 
 		for (auto &bounding_rect : cv_bounding_rectangles){
+
+			/*std::cout << "AREA: " << bounding_rect.area() << std::endl;
+			std::cout << "WIDTH: " << bounding_rect.size().width << std::endl;
+			std::cout << "HEIGHT: " << bounding_rect.size().height << std::endl;
+			system("pause");
+		*/	
 			cv::Mat cv_bounding_rectangle_im = cv::Mat(m_resized_frame, bounding_rect); // crop the image from where motion occurs
 			dlib::rectangle dlib_bounding_rectangle = openCVRectToDlib(bounding_rect); // convert current slice to dlib image
 			dlib::rectangle dlib_corresponding_bounding_rectangle = find_in_original_frame(cv::Rect(0, 0, 0, 0), dlib_bounding_rectangle); // motion rectangle in the hd frame
@@ -212,23 +239,29 @@ dlib::array2d<uchar> PlateDetector::detect(cv::Mat &frame){
 			//cv::line(m_resized_frame, cv::Point(0,100), cv::Point(800,100), cv::Scalar(255),2,8,0);
 			cv::rectangle(m_resized_frame, bounding_rect, (0,255,0), 3);
 			cv::imshow("resized frame", m_resized_frame);
+			cv::waitKey(1);
 
 #endif 
 
 			
 			dlib::array2d<unsigned char> dlib_bounding_rectangle_im = convert_cv_2_dlib_image(cv_bounding_rectangle_im); // detectors works on dlib images
 
-			std::vector<dlib::rectangle> dets = dlib::evaluate_detectors(m_detectors, dlib_bounding_rectangle_im); // returns list of detected rectangles
+			//std::vector<dlib::rectangle> dets = dlib::evaluate_detectors(m_detectors, dlib_bounding_rectangle_im); // returns list of detected rectangles
 		
+			std::vector<dlib::rect_detection> rect_detections;
+			std::vector<dlib::rectangle> dets;
+			dlib::evaluate_detectors(m_detectors, dlib_bounding_rectangle_im, rect_detections); // get detection confidence
+			
+			for (auto &rect_det : rect_detections){
+				dets.push_back(rect_det.rect);
+			}
 			// Detector finds something 
 			if (!dets.empty()){
 
-				std::vector<dlib::rect_detection> confidences;
-				dlib::evaluate_detectors(m_detectors, dlib_bounding_rectangle_im, confidences); // get detection confidence
-
+			
 				m_current_det = dets[0]; // dets[0] is the most confident rectangle. (see: dlib::evaluate_detectors())
 
-				m_current_confidence = confidences[0].detection_confidence;
+				m_current_confidence = rect_detections[0].detection_confidence;
 
 
 				if (m_current_confidence < 0.5){
@@ -244,7 +277,7 @@ dlib::array2d<uchar> PlateDetector::detect(cv::Mat &frame){
 				if (m_previous_det.left() != STUPID_CONSTANT_FOR_RESETTING_RECTANGLE){
 
 
-					// If previous and current rectangles are in the same bounding rectangle, compare confidences
+					// If previous and current rectangles are in the same bounding rectangle, compare rect_detections
 					if (check_same_plate(corresponding_previous_det, corresponding_current_det, dlib_corresponding_bounding_rectangle)){
 
 #ifdef DEBUG
