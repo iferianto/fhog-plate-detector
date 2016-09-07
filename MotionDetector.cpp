@@ -18,10 +18,6 @@ MotionDetector::~MotionDetector(){
 std::vector<cv::Rect> MotionDetector::get_bounding_rectangles(){
 	assert(!m_frame.empty());
 
-#ifdef DEBUG
-	std::cout << "get_bounding_rectangle Called!" << std::endl;
-#endif
-
 	m_pMOG2->apply(m_frame, m_fgMaskMOG2);
 	cv::morphologyEx(m_fgMaskMOG2, m_binary_image, CV_MOP_CLOSE, SE5x5);
 	cv::threshold(m_binary_image, m_binary_image, MIN_BINARY_THRESHOLD, MAX_BINARY_THRESHOLD, CV_THRESH_BINARY);
@@ -33,17 +29,18 @@ std::vector<cv::Rect> MotionDetector::get_bounding_rectangles(){
 		CV_CHAIN_APPROX_SIMPLE); // all pixels of each contours
 	std::vector< std::vector< cv::Point> >::iterator itc = contours.begin();
 	
+
 	// Filter Bounding Rectangles
 	while (itc != contours.end()) {
 		cv::Rect br = cv::boundingRect(cv::Mat(*itc));
 
-		if (br.area() > MIN_BR_AREA &&
-			br.width / br.height > MIN_BR_ASPECT_RATIO &&
-			br.width / br.height < MAX_BR_ASPECT_RATIO &&
+		if (//br.area() > MIN_BR_AREA &&
+			//br.width / br.height > MIN_BR_ASPECT_RATIO &&
+			//br.width / br.height < MAX_BR_ASPECT_RATIO &&
 			br.height > MIN_BR_HEIGHT &&
 			br.height < MAX_BR_HEIGHT &&
 			br.width > MIN_BR_WIDTH &&
-			br.width > MIN_BR_WIDTH // MAX_BR_WIDTH
+			br.width < MAX_BR_WIDTH // 
 			)
 		{
 			m_bounding_rectangles.push_back(br); // Add appropriate rectangles to the vector
@@ -53,9 +50,6 @@ std::vector<cv::Rect> MotionDetector::get_bounding_rectangles(){
 		++itc;
 	}
 	
-#ifdef DEBUG
-	std::cout << "get_bounding_rectangle end!" << std::endl;
-#endif
 	return m_bounding_rectangles;
 }
 
