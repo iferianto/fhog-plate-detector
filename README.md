@@ -12,7 +12,7 @@
 
 ## 1. Overview
 
-![Overview](http://prntscr.com/deuyer)
+![Overview](http://image.prntscr.com/image/47595346625f41838f94134f382bb97e.png)
 
 ## Pre-Processing
 The first step is to convert the BGR* color space to grayscale since the detector works on just gradients.  No color information is needed.
@@ -35,7 +35,7 @@ Background subtraction and other operations are not needed in night mode. A simp
 
 
 # Detecting Plates
-![Detecting Plates](http://prntscr.com/dev0nq)
+![Detecting Plates](http://image.prntscr.com/image/304ef94fc4ce43549f595e6a722ec7ef.png)
 
 Since the Optical Character Recognition (OCR) is much slower than detection, we need to perform a very effective detection:
 -	~23 fps
