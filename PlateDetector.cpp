@@ -40,7 +40,14 @@ void PlateDetector::resize_frame(cv::Mat &frame){
 
 }
 
-
+/*
+* reset_nomotion
+*
+* @brief:
+*	- if there is no motion in the stream, reset the previous_det,
+*	since there is no other plates to compare with
+*
+*/
 void PlateDetector::reset_nomotion(){
 
 	// BEST CODE IN THE WHOLE UNIVERSE
@@ -53,7 +60,18 @@ void PlateDetector::reset_nomotion(){
 
 }
 
-// TODO: read file paths from config file
+/*
+* load_detectors
+*
+* TODO: There may be more than 3 detectors, make it generic.
+*
+* @brief:
+*	- Load a previously trained object detector located in svm_directory
+*
+* @params:
+*	-d1, d2, d3: true as default setting, load all detectors
+*
+*/
 std::vector<dlib::object_detector<image_scanner_type>> PlateDetector::load_detectors(bool d1, bool d2, bool d3){
 
 	std::vector<dlib::object_detector<image_scanner_type>> my_detectors;
@@ -81,6 +99,22 @@ std::vector<dlib::object_detector<image_scanner_type>> PlateDetector::load_detec
 
 }
 
+
+/*
+* find_in_original_frame:
+*
+* @brief:
+*	Since it is faster/cheaper to process, the plate detection runs on a resized image.
+*	However, to recognize characters in the plate, higher resolution image is preferred.
+*
+* @params:
+*	- cv::Rect bounding_rect: the rectangle where the motion occurs
+*	- dlib::rectangle det: the rectangle where the plate detected
+*
+* @returns:
+*	- corresponding detection rectangle in the original frame
+*
+*/
 dlib::rectangle PlateDetector::find_in_original_frame(cv::Rect &bounding_rect, dlib::rectangle &det){
 
 	dlib::rectangle newDet;
@@ -103,11 +137,25 @@ dlib::rectangle PlateDetector::find_in_original_frame(cv::Rect &bounding_rect, d
 
 }
 
+
 dlib::rectangle PlateDetector::openCVRectToDlib(cv::Rect &r){
 	return dlib::rectangle((long)r.tl().x, (long)r.tl().y, (long)r.br().x - 1, (long)r.br().y - 1);
 }
 
-
+/*
+* update_best_plate
+*
+* @brief:
+*	- in the same bounding rectangle, if better plate is found (more confident one) 
+*updates the best plate.
+*
+* @returns:
+*	- m_best_frame
+*	- m_best_det   
+*	- m_best_confidence
+*	-
+*
+*/
 void PlateDetector::update_best_plate(cv::Mat &current_frame,
 	dlib::rectangle &current_det,
 	double &current_confidence, std::string current_dir){
@@ -119,8 +167,24 @@ void PlateDetector::update_best_plate(cv::Mat &current_frame,
 
 }
 
-// distance between 2 rectangles is less than deltas
 
+/*
+* check_same_plate
+*
+* @brief:
+*	We do want to track the plate after detection is finished.
+*	If distance between two detected plates is small enough (depending on camera view /resolution), probably it is the same plate.
+*	
+*
+*
+* @params:
+*	-r1: previous detected plate rectangle
+*	-r2: current detected plate rectangle
+*	-bounding_rectangle: current region of interest
+* @returns:
+*	true: if two rectangles are close to each other
+*
+*/
 bool PlateDetector::check_same_plate(dlib::rectangle &r1, dlib::rectangle &r2, dlib::rectangle &bounding_rectangle){
 	int delta_x = 50;
 	int delta_y = 50;
@@ -151,6 +215,18 @@ bool PlateDetector::check_same_plate(dlib::rectangle &r1, dlib::rectangle &r2, d
 
 }
 
+/*
+* read_config_file
+* 
+* @brief:
+*	- Called once when PlateDetector object is created.
+*	- Reads PlateDetectorConfig.txt which contains svm files and user-defined detection rectangle
+*
+* @return:
+*	- svm files (defalut " "), user-defiend detection rectangle (default 0)
+*
+* 
+*/
 void PlateDetector::read_config_file(){
 
 	dlib::config_reader cr("PlateDetectorConfig.txt");
@@ -170,12 +246,32 @@ void PlateDetector::read_config_file(){
 	 
 }
 
+/*
+* convert_cv_2_dlib_image
+*
+* @brief: 
+*	- Dlib's fhog evaluator works on dlib's rectangle and dlib's image (array2d),
+* we use openCV to get frames.
+*	 
+*/
 dlib::array2d<uchar> PlateDetector::convert_cv_2_dlib_image(const cv::Mat &cv_im){
 	dlib::array2d<unsigned char> dlib_im;
 	dlib::assign_image(dlib_im, dlib::cv_image<uchar>(cv_im));
 	return dlib_im;
 }
 
+/*
+* get_best_plate
+*
+* @brief:
+*	- Called when returning the final result.
+*	- Extracts the best detection rectangle from the frame (if exist)
+* 
+* @returns:
+*	- array2d<uchar> output_rect
+*
+*
+*/
 dlib::array2d<uchar> PlateDetector::get_best_plate(){
 	dlib::array2d<uchar> output_rect;
 
@@ -188,28 +284,41 @@ dlib::array2d<uchar> PlateDetector::get_best_plate(){
 	dlib::extract_image_chip(dlib_img, m_best_det, output_rect);
 	return output_rect;
 }
+
+/*
+* detect:
+*
+* @brief:
+*	-
+*
+* @params:
+*	-cv::Mat &frame: the current frame
+*
+*
+* @returns:
+*
+*
+*
+*/
 dlib::array2d<uchar> PlateDetector::detect(cv::Mat &frame){
 	static int nicevariableman = 0;
 
 	dlib::array2d<uchar> result;
 
-	m_frame = frame; // cv::Mat m_frame
-	cv::cvtColor(m_frame, m_frame, CV_BGR2GRAY);
+	m_frame = frame; // cv::Mat m_frame, current frame
+	cv::cvtColor(m_frame, m_frame, CV_BGR2GRAY); // convert channel to grayscale
 
-	// Resize to ease detection if possible
-	resize_frame(frame); // then use m_resized_frame
+	// Resize the frame if possible
+	resize_frame(frame); // use m_resized_frame
 
-
-	// Adjust color and blur etc.
 	cv::cvtColor(m_resized_frame, m_resized_frame, CV_BGR2GRAY);
-	cv::GaussianBlur(m_resized_frame, m_resized_frame, cv::Size(5, 5), 0);
+	cv::GaussianBlur(m_resized_frame, m_resized_frame, cv::Size(5, 5), 0); // blur to eliminate noise
 
-	// 1- Detect Motion on processed frame
 	std::vector<cv::Rect> cv_bounding_rectangles;
 	cv::Rect cv_roi_rect;
 	cv::Mat cv_roi_im;
 
-	// if user has defined the roi rectangle in config file
+	// detect motion in predefined roi
 	if (USER_DEFINED_ROI){
 		cv_roi_rect = (cv::Rect(cv::Point(DETECTION_RECTANGLE_LEFT, DETECTION_RECTANGLE_TOP), cv::Point(DETECTION_RECTANGLE_RIGHT, DETECTION_RECTANGLE_BOT)));
 		cv_roi_im = cv::Mat(m_resized_frame, cv_roi_rect); // crop the image from where motion occurs, assume you have 1 br
@@ -218,95 +327,54 @@ dlib::array2d<uchar> PlateDetector::detect(cv::Mat &frame){
 		if (!m_md.get_bounding_rectangles().empty()){
 			cv_bounding_rectangles.push_back(cv_roi_rect);
 		}
-		cv::imshow("roi_im", cv_roi_im);
-		cv::waitKey(1);
 	}
 	
+	// detect motion in whole frame as default
 	else{
 		m_md.set_frame(m_resized_frame);
 		cv_bounding_rectangles = m_md.get_bounding_rectangles();	
 	}
 	
-
-
-	// 2- Detect Plate (if motion detected)
+	// start plate detection if motion detected
 	if (!cv_bounding_rectangles.empty()){
+		
 		dlib::array2d<unsigned char> dlib_frame = convert_cv_2_dlib_image(m_resized_frame); // keep the original frame for extraction
-
-
 		for (auto &bounding_rect : cv_bounding_rectangles){
-
 			cv::Mat cv_bounding_rectangle_im = cv::Mat(m_resized_frame, bounding_rect); // crop the image from where motion occurs
 			dlib::rectangle dlib_bounding_rectangle = openCVRectToDlib(bounding_rect); // convert current slice to dlib image
 			dlib::rectangle dlib_corresponding_bounding_rectangle = find_in_original_frame(cv::Rect(0, 0, 0, 0), dlib_bounding_rectangle); // motion rectangle in the hd frame
 
-#ifdef DEBUG
-			//cv::line(m_resized_frame, cv::Point(0,100), cv::Point(800,100), cv::Scalar(255),2,8,0);
-			/*cv::rectangle(m_resized_frame, bounding_rect, (0,255,0), 3);
-			cv::imshow("resized frame", m_resized_frame);
-			cv::waitKey(1);*/
-
-#endif 
-
-			
 			dlib::array2d<unsigned char> dlib_bounding_rectangle_im = convert_cv_2_dlib_image(cv_bounding_rectangle_im); // detectors works on dlib images
-
-			//std::vector<dlib::rectangle> dets = dlib::evaluate_detectors(m_detectors, dlib_bounding_rectangle_im); // returns list of detected rectangles
-		
 			std::vector<dlib::rect_detection> rect_detections;
 			std::vector<dlib::rectangle> dets;
-
-		//	std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
-
-
 			dlib::evaluate_detectors(m_detectors, dlib_bounding_rectangle_im, rect_detections); // get detection confidence
-			
-		//	std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
-		//	int timeElapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count();
-		//	std::cout << "Detection took: " << timeElapsed << " ms" << std::endl;
-
 
 			for (auto &rect_det : rect_detections){
 				dets.push_back(rect_det.rect);
 			}
-			// Detector finds something 
+	
+			// detector founds something
 			if (!dets.empty()){
-
-			
 				m_current_det = dets[0]; // dets[0] is the most confident rectangle. (see: dlib::evaluate_detectors())
-
 				m_current_confidence = rect_detections[0].detection_confidence;
-
-
+				
+				// usually plates have at least 0.5 confidence, ignore below 0.5
 				if (m_current_confidence < 0.5){
 					break;
 				}
 
-			
 				dlib::rectangle corresponding_current_det = find_in_original_frame(bounding_rect, m_current_det);
 				dlib::rectangle corresponding_previous_det = find_in_original_frame(bounding_rect, m_previous_det);
-
 
 				// If previous_det exist (you have two rectangles to compare each other)
 				if (m_previous_det.left() != STUPID_CONSTANT_FOR_RESETTING_RECTANGLE){
 
 
-					// If previous and current rectangles are in the same bounding rectangle, compare rect_detections
+					// If previous and current rectangles are in the same bounding rectangle, compare confidences
 					if (check_same_plate(corresponding_previous_det, corresponding_current_det, dlib_corresponding_bounding_rectangle)){
-
-#ifdef DEBUG
-						std::cout << "Same Plate Detected\n";
-#endif // DEBUG
-
 
 						// If current confidence is better, update best plate
 						if (m_current_confidence >= m_best_confidence){
-
-#ifdef DEBUG
-							std::cout << "better confidence: " << m_current_confidence <<  std::endl;
-#endif // DEBUG
-
-
 
 							update_best_plate(m_frame, corresponding_current_det, m_current_confidence, ""/*save_dir*/);
 							m_previous_det = m_current_det;
@@ -314,21 +382,12 @@ dlib::array2d<uchar> PlateDetector::detect(cv::Mat &frame){
 						// If previous confidence is better, do nothing
 						else{
 
-#ifdef DEBUG
-							std::cout << "previous confidence better"<< std::endl;
-#endif // DEBUG
-
-
 						}
 
 					}
 
 					// If previous and current rectangles are different 
 					else{
-#ifdef DEBUG
-						std::cout << "New plate detected\n";
-#endif // DEBUG
-
 
 						// send the best plate and update it
 						result = get_best_plate();
@@ -352,7 +411,6 @@ dlib::array2d<uchar> PlateDetector::detect(cv::Mat &frame){
 					nicevariableman = 0;
 			}
 
-
 			// in userdefinedroi mode, 
 			if (USER_DEFINED_ROI){
 				if (m_previous_det.left() != STUPID_CONSTANT_FOR_RESETTING_RECTANGLE && (++nicevariableman > 9)){
@@ -362,10 +420,7 @@ dlib::array2d<uchar> PlateDetector::detect(cv::Mat &frame){
 					nicevariableman = 0;
 				}
 			}
-			
-
 		}
-
 	} 
 
 	if (!USER_DEFINED_ROI){
