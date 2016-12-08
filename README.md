@@ -16,7 +16,7 @@
 
 ## Pre-Processing
 The first step is to convert the BGR* color space to grayscale since the detector works on just gradients.  No color information is needed.
-Processing high resolution images are time consuming and CPU expensive, therefore the next step is to resize the input frame. Also we don’t lose any important information regarding a possible motion in the frame
+Processing high resolution images are time consuming and computationally expensive, therefore the next step is to resize the input frame. Also we don’t lose any important information regarding a possible motion in the frame
 
 The last step is using Gaussian Blur with kernel 5x5 in order to reduce the noise and unnecessary details. I preferred Gaussian over median, mean or bilateral filters because it performs faster than others and edge preservation was not too important.
 
