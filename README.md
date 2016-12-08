@@ -1,4 +1,4 @@
-# Plate Detection using Histogram of Oriented Gradients 
+# License Plate Detection using Histogram of Oriented Gradients 
 
 ## Prerequisites:
   - Libraries
